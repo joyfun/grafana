@@ -16,8 +16,10 @@ import (
 const clientNonceBytes = 16
 const prefix = "n,,"
 
-//GetAuthScram get Scram key
+//AuthScram get Scram key
 func GetAuthScram(url, username, password string) (string, error) {
+	url += "/about"
+	println(url)
 	rstr := getLocalRand()
 	auth := genFirstAuthMsg(username, rstr)
 	firstMsg, err := dolongin(url, auth)
@@ -29,7 +31,7 @@ func main() {
 	password := "su"
 	//Authorization: HELLO username=c3U
 	url := "http://example.com/api/demo/about"
-	msg, _ := AuthScram(url, username, password)
+	msg, _ := GetAuthScram(url, username, password)
 	println(msg)
 	return
 }

@@ -14,7 +14,9 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/grafana/grafana/pkg/models"
+	m "github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/plugins"
+	"github.com/grafana/grafana/pkg/util"
 	"golang.org/x/oauth2/jwt"
 )
 
@@ -155,6 +157,33 @@ func (provider *accessTokenProvider) getJwtAccessToken(ctx context.Context, data
 
 	return token.AccessToken, nil
 }
+func (provider *accessTokenProvider) getScramToken(ctx context.Context, ds *m.DataSource) (string, error) {
+	oauthJwtTokenCache.Lock()
+	defer oauthJwtTokenCache.Unlock()
+	ckey := provider.getScramTokenCacheKey(ds.Url, ds.User)
+	println(ckey)
+	if cachedToken, found := oauthJwtTokenCache.cache[ckey]; found {
+		logger.Info("Token from cache", "ExpiresOn", cachedToken.Expiry)
+		if cachedToken.Expiry.After(time.Now().Add(time.Second * 10)) {
+			logger.Debug("Using token from cache")
+			return cachedToken.AccessToken, nil
+		}
+	}
+
+	key, err := util.GetAuthScram(ds.Url, ds.User, ds.DecryptedPassword())
+	token := new(oauth2.Token)
+	token.AccessToken = key
+	token.Expiry = time.Now().Add(time.Hour * 4)
+	if err != nil {
+		return "", err
+	}
+
+	oauthJwtTokenCache.cache[ckey] = token
+
+	logger.Info("Got new access token", "ExpiresOn", token.Expiry)
+
+	return token.AccessToken, nil
+}
 
 var getTokenSource = func(conf *jwt.Config, ctx context.Context) (*oauth2.Token, error) {
 	tokenSrc := conf.TokenSource(ctx)
@@ -168,4 +197,7 @@ var getTokenSource = func(conf *jwt.Config, ctx context.Context) (*oauth2.Token,
 
 func (provider *accessTokenProvider) getAccessTokenCacheKey() string {
 	return fmt.Sprintf("%v_%v_%v_%v", provider.datasourceId, provider.datasourceVersion, provider.route.Path, provider.route.Method)
+}
+func (provider *accessTokenProvider) getScramTokenCacheKey(url, user string) string {
+	return fmt.Sprintf("%v_%v_%v_%v", provider.datasourceId, provider.datasourceVersion, url, user)
 }

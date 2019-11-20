@@ -8,6 +8,8 @@ const elasticsearchPlugin = async () =>
   await import(/* webpackChunkName: "elasticsearchPlugin" */ 'app/plugins/datasource/elasticsearch/module');
 const opentsdbPlugin = async () =>
   await import(/* webpackChunkName: "opentsdbPlugin" */ 'app/plugins/datasource/opentsdb/module');
+const skysparkPlugin = async () =>
+  await import(/* webpackChunkName: "skysparkPlugin" */ 'app/plugins/datasource/skyspark/module');
 const grafanaPlugin = async () =>
   await import(/* webpackChunkName: "grafanaPlugin" */ 'app/plugins/datasource/grafana/module');
 const influxdbPlugin = async () =>
@@ -59,6 +61,7 @@ const builtInPlugins: any = {
   'app/plugins/datasource/dashboard/module': dashboardDSPlugin,
   'app/plugins/datasource/elasticsearch/module': elasticsearchPlugin,
   'app/plugins/datasource/opentsdb/module': opentsdbPlugin,
+  'app/plugins/datasource/skyspark/module': skysparkPlugin,
   'app/plugins/datasource/grafana/module': grafanaPlugin,
   'app/plugins/datasource/influxdb/module': influxdbPlugin,
   'app/plugins/datasource/loki/module': lokiPlugin,

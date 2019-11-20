@@ -14,6 +14,7 @@ const (
 	DS_INFLUXDB_08   = "influxdb_08"
 	DS_ES            = "elasticsearch"
 	DS_OPENTSDB      = "opentsdb"
+	DS_SKYSPARK      = "skyspark"
 	DS_CLOUDWATCH    = "cloudwatch"
 	DS_KAIROSDB      = "kairosdb"
 	DS_PROMETHEUS    = "prometheus"
@@ -91,6 +92,7 @@ var knownDatasourcePlugins = map[string]bool{
 	DS_CLOUDWATCH:                            true,
 	DS_PROMETHEUS:                            true,
 	DS_OPENTSDB:                              true,
+	DS_SKYSPARK:                              true,
 	DS_POSTGRES:                              true,
 	DS_MYSQL:                                 true,
 	DS_MSSQL:                                 true,

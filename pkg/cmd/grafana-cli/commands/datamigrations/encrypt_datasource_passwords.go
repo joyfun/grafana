@@ -22,6 +22,7 @@ var (
 		"graphite",
 		"prometheus",
 		"opentsdb",
+		"skyspark",
 	}
 )
 
