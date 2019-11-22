@@ -1,6 +1,47 @@
 import _ from 'lodash';
 
 export default class ResponseParser {
+  parseVal(valstr: any) {
+    if (valstr === null || valstr === undefined) {
+      return null;
+    } else if (valstr === true || valstr === false) {
+      return valstr;
+    } else {
+      //console.log(valstr)
+      const type = valstr.substring(0, 2);
+      const val = valstr.substring(2);
+
+      // if (type==='b:') return HBin.make(val);else
+      // if (type==='c:') { let v = val.split(','); return HCoord.make(parseFloat(v[0]), parseFloat(v[1])); }
+      //else if (type==='d:') { return HDate.make(val); }
+      if (type === 't:') {
+        return Date.parse(valstr.substring(2, 27));
+      } else if (type === 'n:') {
+        const v = val.split(' ');
+        if (v[0] === 'INF') {
+          v[0] = Number.POSITIVE_INFINITY;
+        } else if (v[0] === '-INF') {
+          v[0] = Number.NEGATIVE_INFINITY;
+        }
+        if (v[0] === 'NaN') {
+          v[0] = Number.NaN;
+        }
+        if (v[0] != null) {
+          v[0] = parseFloat(v[0]).toFixed(2);
+        }
+        return v[0];
+      } else if (type === 'r:') {
+        const v = val.split(' ');
+        for (let i = 2; i < v.length; i++) {
+          v[1] += ' ' + v[i];
+        }
+        return v[1];
+      } else {
+        return valstr;
+        //throw new Error("Invalid Type Reference: '" + type + val + "'");
+      }
+    }
+  }
   parse(query: string, results: { results: any }) {
     if (!results || results.results.length === 0) {
       return [];

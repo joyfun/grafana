@@ -14,42 +14,43 @@ export default class SkysparkSeries {
   }
 
   getTimeSeries() {
+    console.log('spark deal timeSeries');
     const output: any[] = [];
     let i, j;
 
     if (this.series.length === 0) {
       return output;
     }
-
-    _.each(this.series, series => {
-      const columns = series.columns.length;
-      const tags = _.map(series.tags, (value, key) => {
-        return key + ': ' + value;
-      });
-
-      for (j = 1; j < columns; j++) {
-        let seriesName = series.name;
-        const columnName = series.columns[j];
-        if (columnName !== 'value') {
-          seriesName = seriesName + '.' + columnName;
-        }
-
-        if (this.alias) {
-          seriesName = this._getSeriesName(series, j);
-        } else if (series.tags) {
-          seriesName = seriesName + ' {' + tags.join(', ') + '}';
-        }
-
-        const datapoints = [];
-        if (series.values) {
-          for (i = 0; i < series.values.length; i++) {
-            datapoints[i] = [series.values[i][j], series.values[i][0]];
-          }
-        }
-
-        output.push({ target: seriesName, datapoints: datapoints });
-      }
+    const series = this.series;
+    // _.each(this.series, series => {
+    const columns = series.columns.length;
+    const tags = _.map(series.tags, (value, key) => {
+      return key + ': ' + value;
     });
+
+    for (j = 1; j < columns; j++) {
+      let seriesName = series.name;
+      const columnName = series.columns[j];
+      if (columnName !== 'value') {
+        seriesName = columnName;
+      }
+
+      if (this.alias) {
+        seriesName = this._getSeriesName(series, j);
+      } else if (series.tags) {
+        seriesName = seriesName + ' {' + tags.join(', ') + '}';
+      }
+
+      const datapoints = [];
+      if (series.values) {
+        for (i = 0; i < series.values.length; i++) {
+          datapoints[i] = [series.values[i][j], series.values[i][0]];
+        }
+      }
+
+      output.push({ target: seriesName, datapoints: datapoints });
+    }
+    // });
 
     return output;
   }
@@ -93,7 +94,7 @@ export default class SkysparkSeries {
       let textCol: any = null;
 
       _.each(series.columns, (column, index) => {
-        if (column === 'time') {
+        if (column === 'ts') {
           timeCol = index;
           return;
         }

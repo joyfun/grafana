@@ -97,3 +97,4 @@ theOutput/
 
 # Ignore compilation stats from `yarn stats`
 compilation-stats.json
+pkg/cmd/grafana-server/__debug_bin

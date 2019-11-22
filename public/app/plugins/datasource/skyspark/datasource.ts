@@ -22,6 +22,7 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
   interval: any;
   responseParser: any;
   httpMode: string;
+  skyTimes: any;
   authenticationType: string;
 
   /** @ngInject */
@@ -32,6 +33,7 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
     private templateSrv: TemplateSrv
   ) {
     super(instanceSettings);
+    this.skyTimes = { d: 'day', m: 'mo', w: 'week', y: 'yr' };
     this.type = 'skyspark';
     this.urls = _.map(instanceSettings.url.split(','), url => {
       return url.trim();
@@ -51,14 +53,13 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
     this.responseParser = new ResponseParser();
     this.authenticationType = settingsData.authenticationType;
   }
-
   query(options: any) {
     let timeFilter = this.getTimeFilter(options);
     const scopedVars = options.scopedVars;
     const targets = _.cloneDeep(options.targets);
     const queryTargets: any[] = [];
     let queryModel: SkysparkQueryModel;
-    let i, y;
+    let y;
 
     let allQueries = _.map(targets, target => {
       if (target.hide) {
@@ -97,40 +98,59 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
 
     return this._seriesQuery(allQueries, options).then(
       (data: any): any => {
-        if (!data || !data.results) {
+        console.log(data);
+        if (!data || !data.cols) {
           return [];
         }
 
         const seriesList = [];
-        for (i = 0; i < data.results.length; i++) {
-          const result = data.results[i];
-          if (!result || !result.series) {
-            continue;
-          }
 
-          const target = queryTargets[i];
-          let alias = target.alias;
-          if (alias) {
-            alias = this.templateSrv.replace(target.alias, options.scopedVars);
-          }
-
-          const skysparkSeries = new SkysparkSeries({
-            series: data.results[i].series,
-            alias: alias,
-          });
-
-          switch (target.resultFormat) {
-            case 'table': {
-              seriesList.push(skysparkSeries.getTable());
-              break;
+        const target = data.meta.equipName;
+        const alias = data.meta.equipName;
+        const series: any = {};
+        const colnames: string[] = [];
+        const coldis: string[] = [];
+        data.cols.forEach((cl: any, index: any) => {
+          if ((data.meta.chartType === 'donut' || data.meta.chartType === 'pie') && cl['name'] === 'ts') {
+          } else {
+            colnames.push(cl['name']);
+            let dis = cl['name'];
+            if (cl['dis']) {
+              dis = cl['dis'];
             }
-            default: {
-              const timeSeries = skysparkSeries.getTimeSeries();
-              for (y = 0; y < timeSeries.length; y++) {
-                seriesList.push(timeSeries[y]);
-              }
-              break;
+            coldis.push(dis);
+          }
+        });
+        const nseries = data.rows.map((p: any) => {
+          const rst: any[] = [];
+          for (const idx in colnames) {
+            let val = this.responseParser.parseVal(p[colnames[idx]]);
+            if (data.meta.chartType === 'donut') {
+              val = parseFloat(val);
             }
+            rst.push(val);
+          }
+          return rst;
+        });
+        series.name = target;
+        series.columns = coldis;
+        series.values = nseries;
+        const skysparkSeries = new SkysparkSeries({
+          series: series,
+          alias: alias,
+        });
+
+        switch (target) {
+          case 'table': {
+            seriesList.push(skysparkSeries.getTable());
+            break;
+          }
+          default: {
+            const timeSeries = skysparkSeries.getTimeSeries();
+            for (y = 0; y < timeSeries.length; y++) {
+              seriesList.push(timeSeries[y]);
+            }
+            break;
           }
         }
 
@@ -348,12 +368,11 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
     const from = this.getSkysparkTime(options.rangeRaw.from, false, options.timezone);
     const until = this.getSkysparkTime(options.rangeRaw.to, true, options.timezone);
     const fromIsAbsolute = from[from.length - 1] === 'ms';
+    console.log(fromIsAbsolute);
+    console.log(from);
+    console.log(until);
 
-    if (until === 'now()' && !fromIsAbsolute) {
-      return 'time >= ' + from;
-    }
-
-    return 'time >= ' + from + ' and time <= ' + until;
+    return from + '..' + until;
   }
 
   getSkysparkTime(date: any, roundUp: any, timezone: any) {
@@ -366,11 +385,11 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
       if (parts) {
         const amount = parseInt(parts[1], 10);
         const unit = parts[2];
-        return 'now() - ' + amount + unit;
+        return 'now() - ' + amount + this.skyTimes[unit];
       }
       date = dateMath.parse(date, roundUp, timezone);
     }
 
-    return date.valueOf() + 'ms';
+    return 'fromJavaMillis(' + date.valueOf() + ')';
   }
 }
