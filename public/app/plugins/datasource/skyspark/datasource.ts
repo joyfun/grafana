@@ -111,15 +111,15 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
         const colnames: string[] = [];
         const coldis: string[] = [];
         data.cols.forEach((cl: any, index: any) => {
-          if ((data.meta.chartType === 'donut' || data.meta.chartType === 'pie') && cl['name'] === 'ts') {
-          } else {
-            colnames.push(cl['name']);
-            let dis = cl['name'];
-            if (cl['dis']) {
-              dis = cl['dis'];
-            }
-            coldis.push(dis);
+          // if ((data.meta.chartType === 'donut' || data.meta.chartType === 'pie') && cl['name'] === 'ts') {
+          // } else {
+          colnames.push(cl['name']);
+          let dis = cl['name'];
+          if (cl['dis']) {
+            dis = cl['dis'];
           }
+          coldis.push(dis);
+          // }
         });
         const nseries = data.rows.map((p: any) => {
           const rst: any[] = [];
@@ -367,11 +367,10 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
   getTimeFilter(options: any) {
     const from = this.getSkysparkTime(options.rangeRaw.from, false, options.timezone);
     const until = this.getSkysparkTime(options.rangeRaw.to, true, options.timezone);
-    const fromIsAbsolute = from[from.length - 1] === 'ms';
-    console.log(fromIsAbsolute);
-    console.log(from);
-    console.log(until);
-
+    // const fromIsAbsolute = from[from.length - 1] === 'ms';
+    // console.log(fromIsAbsolute);
+    // console.log(from);
+    // console.log(until);
     return from + '..' + until;
   }
 
