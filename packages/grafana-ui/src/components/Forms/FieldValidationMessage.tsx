@@ -2,6 +2,7 @@ import React from 'react';
 import { useTheme, stylesFactory } from '../../themes';
 import { GrafanaTheme } from '@grafana/data';
 import { css, cx } from 'emotion';
+import { Icon } from '../Icon/Icon';
 
 export interface FieldValidationMessageProps {
   children: string;
@@ -13,12 +14,13 @@ export const getFieldValidationMessageStyles = stylesFactory((theme: GrafanaThem
     fieldValidationMessage: css`
       font-size: ${theme.typography.size.sm};
       font-weight: ${theme.typography.weight.semibold};
-      margin: ${theme.spacing.formLabelMargin};
+      margin: ${theme.spacing.formValidationMessageMargin};
       padding: ${theme.spacing.formValidationMessagePadding};
       color: ${theme.colors.formValidationMessageText};
       background: ${theme.colors.formValidationMessageBg};
       border-radius: ${theme.border.radius.sm};
       position: relative;
+      display: inline-block;
 
       &:before {
         content: '';
@@ -44,7 +46,7 @@ export const FieldValidationMessage: React.FC<FieldValidationMessageProps> = ({ 
 
   return (
     <div className={cx(styles.fieldValidationMessage, className)}>
-      <i className={cx(styles.fieldValidationMessageIcon, 'fa', 'fa-warning')} />
+      <Icon className={styles.fieldValidationMessageIcon} name="exclamation-triangle" />
       {children}
     </div>
   );

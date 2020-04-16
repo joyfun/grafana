@@ -1,6 +1,7 @@
 import React, { ChangeEvent, PureComponent } from 'react';
 import { SelectableValue } from '@grafana/data';
-import { Input, FormLabel, Select, Button } from '@grafana/ui';
+import { FormLabel, LegacyForms, Button } from '@grafana/ui';
+const { Select, Input } = LegacyForms;
 
 export interface Props {
   selectedAzureCloud?: string;
@@ -13,58 +14,22 @@ export interface Props {
   subscriptionOptions?: SelectableValue[];
   onAzureCloudChange?: (value: SelectableValue<string>) => void;
   onSubscriptionSelectChange?: (value: SelectableValue<string>) => void;
-  onTenantIdChange: (tenantId: string) => void;
-  onClientIdChange: (clientId: string) => void;
-  onClientSecretChange: (clientSecret: string) => void;
+  onTenantIdChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onClientIdChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onClientSecretChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onResetClientSecret: () => void;
   onLoadSubscriptions?: () => void;
 }
 
-export interface State {
-  selectedAzureCloud?: string;
-  selectedSubscription: string;
-  tenantId: string;
-  clientId: string;
-  clientSecret: string;
-  clientSecretConfigured: boolean;
-}
-
-export class AzureCredentialsForm extends PureComponent<Props, State> {
-  constructor(props: Props) {
-    super(props);
-
-    const {
-      selectedAzureCloud,
-      selectedSubscription,
-      tenantId,
-      clientId,
-      clientSecret,
-      clientSecretConfigured,
-    } = this.props;
-
-    this.state = {
-      selectedAzureCloud,
-      selectedSubscription,
-      tenantId,
-      clientId,
-      clientSecret,
-      clientSecretConfigured,
-    };
-  }
-
-  static getDerivedStateFromProps(nextProps: Props, prevState: Props) {
-    const { selectedAzureCloud, tenantId, clientId, clientSecret, clientSecretConfigured } = nextProps;
-    return {
-      selectedAzureCloud,
-      tenantId,
-      clientId,
-      clientSecret,
-      clientSecretConfigured,
-    };
-  }
-
+export class AzureCredentialsForm extends PureComponent<Props> {
   render() {
     const {
+      selectedAzureCloud,
+      selectedSubscription,
+      tenantId,
+      clientId,
+      clientSecret,
+      clientSecretConfigured,
       azureCloudOptions,
       subscriptionOptions,
       onAzureCloudChange,
@@ -75,16 +40,9 @@ export class AzureCredentialsForm extends PureComponent<Props, State> {
       onResetClientSecret,
       onLoadSubscriptions,
     } = this.props;
-    const {
-      selectedAzureCloud,
-      selectedSubscription,
-      tenantId,
-      clientId,
-      clientSecret,
-      clientSecretConfigured,
-    } = this.state;
     const hasRequiredFields = tenantId && clientId && (clientSecret || clientSecretConfigured);
     const hasSubscriptions = onLoadSubscriptions && subscriptionOptions;
+
     return (
       <>
         <div className="gf-form-group">
@@ -112,7 +70,7 @@ export class AzureCredentialsForm extends PureComponent<Props, State> {
                   className="width-30"
                   placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
                   value={tenantId || ''}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => onTenantIdChange(event.target.value)}
+                  onChange={onTenantIdChange}
                 />
               </div>
             </div>
@@ -125,7 +83,7 @@ export class AzureCredentialsForm extends PureComponent<Props, State> {
                   className="width-30"
                   placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
                   value={clientId || ''}
-                  onChange={(event: ChangeEvent<HTMLInputElement>) => onClientIdChange(event.target.value)}
+                  onChange={onClientIdChange}
                 />
               </div>
             </div>
@@ -153,7 +111,7 @@ export class AzureCredentialsForm extends PureComponent<Props, State> {
                     className="width-30"
                     placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
                     value={clientSecret || ''}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => onClientSecretChange(event.target.value)}
+                    onChange={onClientSecretChange}
                   />
                 </div>
               </div>

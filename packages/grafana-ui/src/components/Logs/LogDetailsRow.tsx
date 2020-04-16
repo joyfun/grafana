@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 import { css, cx } from 'emotion';
-import { LogLabelStatsModel, GrafanaTheme } from '@grafana/data';
+import { Field, LinkModel, LogLabelStatsModel, GrafanaTheme } from '@grafana/data';
 
 import { Themeable } from '../../types/theme';
 import { withTheme } from '../../themes/index';
@@ -9,6 +9,8 @@ import { stylesFactory } from '../../themes/stylesFactory';
 
 //Components
 import { LogLabelStats } from './LogLabelStats';
+import { LinkButton } from '../Button/Button';
+import { Icon } from '../Icon/Icon';
 
 export interface Props extends Themeable {
   parsedValue: string;
@@ -16,7 +18,7 @@ export interface Props extends Themeable {
   isLabel?: boolean;
   onClickFilterLabel?: (key: string, value: string) => void;
   onClickFilterOutLabel?: (key: string, value: string) => void;
-  links?: string[];
+  links?: Array<LinkModel<Field>>;
   getStats: () => LogLabelStatsModel[] | null;
 }
 
@@ -28,11 +30,19 @@ interface State {
 
 const getStyles = stylesFactory((theme: GrafanaTheme) => {
   return {
-    noHoverEffect: css`
-      label: noHoverEffect;
+    noHoverBackground: css`
+      label: noHoverBackground;
       :hover {
         background-color: transparent;
       }
+    `,
+    hoverCursor: css`
+      label: hoverCursor;
+      cursor: pointer;
+    `,
+    wordBreakAll: css`
+      label: wordBreakAll;
+      word-break: break-all;
     `,
   };
 });
@@ -82,61 +92,65 @@ class UnThemedLogDetailsRow extends PureComponent<Props, State> {
     const styles = getStyles(theme);
     const style = getLogRowStyles(theme);
     return (
-      <div className={cx(style.logsRowDetailsValue, { [styles.noHoverEffect]: showFieldsStats })}>
+      <tr className={cx(style.logDetailsValue, { [styles.noHoverBackground]: showFieldsStats })}>
         {/* Action buttons - show stats/filter results */}
-        <div
-          title="Ad-hoc statistics"
-          onClick={this.showStats}
-          aria-label={'Field stats'}
-          className={style.logsRowDetailsIcon}
-        >
-          <i className={'fa fa-signal'} />
-        </div>
-        {isLabel ? (
-          <div title="Filter for value" onClick={() => this.filterLabel()} className={style.logsRowDetailsIcon}>
-            <i className={'fa fa-search-plus'} />
-          </div>
-        ) : (
-          <div className={style.logsRowDetailsIcon} />
-        )}
-        {isLabel ? (
-          <div title="Filter out value" onClick={() => this.filterOutLabel()} className={style.logsRowDetailsIcon}>
-            <i className={'fa fa-search-minus'} />
-          </div>
-        ) : (
-          <div className={style.logsRowDetailsIcon} />
+        <td className={style.logsDetailsIcon} colSpan={isLabel ? undefined : 3}>
+          <Icon name="signal" title={'Ad-hoc statistics'} onClick={this.showStats} />
+        </td>
+
+        {isLabel && (
+          <>
+            <td className={style.logsDetailsIcon}>
+              <Icon name="search-minus" title="Filter for value" onClick={this.filterLabel} />
+            </td>
+            <td className={style.logsDetailsIcon}>
+              <Icon name="search-plus" title="Filter out value" onClick={this.filterOutLabel} />
+            </td>
+          </>
         )}
 
         {/* Key - value columns */}
-        <div className={style.logsRowDetailsLabel}>
-          <span>{parsedKey}</span>
-        </div>
-        <div className={style.logsRowCell}>
-          <span>{parsedValue}</span>
+        <td className={style.logDetailsLabel}>{parsedKey}</td>
+        <td className={styles.wordBreakAll}>
+          {parsedValue}
           {links &&
             links.map(link => {
               return (
-                <span key={link}>
-                  &nbsp;
-                  <a href={link} target={'_blank'}>
-                    <i className={'fa fa-external-link'} />
-                  </a>
+                <span key={link.href}>
+                  <>
+                    &nbsp;
+                    <LinkButton
+                      variant="link"
+                      size={'sm'}
+                      icon={link.onClick ? 'list-ul' : 'external-link-alt'}
+                      href={link.href}
+                      target={'_blank'}
+                      onClick={
+                        link.onClick
+                          ? event => {
+                              if (!(event.ctrlKey || event.metaKey || event.shiftKey) && link.onClick) {
+                                event.preventDefault();
+                                link.onClick(event);
+                              }
+                            }
+                          : undefined
+                      }
+                    />
+                  </>
                 </span>
               );
             })}
           {showFieldsStats && (
-            <div className={style.logsRowCell}>
-              <LogLabelStats
-                stats={fieldStats!}
-                label={parsedKey}
-                value={parsedValue}
-                rowCount={fieldCount}
-                isLabel={isLabel}
-              />
-            </div>
+            <LogLabelStats
+              stats={fieldStats!}
+              label={parsedKey}
+              value={parsedValue}
+              rowCount={fieldCount}
+              isLabel={isLabel}
+            />
           )}
-        </div>
-      </div>
+        </td>
+      </tr>
     );
   }
 }

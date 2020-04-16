@@ -1,6 +1,7 @@
 import React, { PureComponent } from 'react';
 import { dateTime } from '@grafana/data';
 import { LdapUserSyncInfo } from 'app/types';
+import { Icon } from '@grafana/ui';
 
 interface Props {
   disableSync: boolean;
@@ -19,7 +20,7 @@ export class UserSyncInfo extends PureComponent<Props, State> {
     isSyncing: false,
   };
 
-  handleSyncClick = async () => {
+  onSyncClick = async () => {
     const { onSync } = this.props;
     this.setState({ isSyncing: true });
     try {
@@ -41,9 +42,9 @@ export class UserSyncInfo extends PureComponent<Props, State> {
 
     return (
       <>
-        <button className={`btn btn-secondary pull-right`} onClick={this.handleSyncClick} disabled={isDisabled}>
+        <button className={`btn btn-secondary pull-right`} onClick={this.onSyncClick} disabled={isDisabled}>
           <span className="btn-title">Sync user</span>
-          {isSyncing && <i className="fa fa-spinner fa-fw fa-spin run-icon" />}
+          {isSyncing && <Icon name="fa fa-spinner" className="fa-fw fa-spin run-icon" />}
         </button>
 
         <div className="clearfix" />

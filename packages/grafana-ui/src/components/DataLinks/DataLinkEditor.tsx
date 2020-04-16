@@ -1,11 +1,11 @@
-import React, { useState, ChangeEvent, useContext } from 'react';
-import { DataLink } from '@grafana/data';
-import { FormField, Switch } from '../index';
-import { VariableSuggestion } from './DataLinkSuggestions';
+import React, { ChangeEvent, useContext } from 'react';
+import { DataLink, VariableSuggestion, GrafanaTheme } from '@grafana/data';
+import { FormField } from '../index';
+import { Switch } from '../Switch/Switch';
 import { css } from 'emotion';
 import { ThemeContext, stylesFactory } from '../../themes/index';
 import { DataLinkInput } from './DataLinkInput';
-import { GrafanaTheme } from '@grafana/data';
+import { Icon } from '../Icon/Icon';
 
 interface DataLinkEditorProps {
   index: number;
@@ -31,17 +31,12 @@ export const DataLinkEditor: React.FC<DataLinkEditorProps> = React.memo(
   ({ index, value, onChange, onRemove, suggestions, isLast }) => {
     const theme = useContext(ThemeContext);
     const styles = getStyles(theme);
-    const [title, setTitle] = useState(value.title);
 
     const onUrlChange = (url: string, callback?: () => void) => {
       onChange(index, { ...value, url }, callback);
     };
     const onTitleChange = (event: ChangeEvent<HTMLInputElement>) => {
-      setTitle(event.target.value);
-    };
-
-    const onTitleBlur = () => {
-      onChange(index, { ...value, title: title });
+      onChange(index, { ...value, title: event.target.value });
     };
 
     const onRemoveClick = () => {
@@ -58,16 +53,15 @@ export const DataLinkEditor: React.FC<DataLinkEditorProps> = React.memo(
           <FormField
             className="gf-form--grow"
             label="Title"
-            value={title}
+            value={value.title}
             onChange={onTitleChange}
-            onBlur={onTitleBlur}
             inputWidth={0}
             labelWidth={5}
             placeholder="Show details"
           />
           <Switch label="Open in new tab" checked={value.targetBlank || false} onChange={onOpenInNewTabChanged} />
           <button className="gf-form-label gf-form-label--btn" onClick={onRemoveClick} title="Remove link">
-            <i className="fa fa-times" />
+            <Icon name="times" />
           </button>
         </div>
         <FormField

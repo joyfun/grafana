@@ -46,13 +46,8 @@
 .modal-header-title {
   font-size: $font-size-h3;
   float: left;
-  padding-top: $spacer * 0.75;
-  margin: 0 $spacer * 3 0 $spacer * 1.5;
-
-  .gicon {
-    position: relative;
-    top: -2px;
-  }
+  padding-top: $space-sm;
+  margin: 0 $space-md;
 }
 
 .modal-header-close {
@@ -110,7 +105,7 @@
   }
 
   .confirm-modal-text2 {
-    font-size: $font-size-root;
+    font-size: $font-size-base;
     padding-top: $spacer;
   }
 
@@ -142,15 +137,8 @@
   }
 
   .share-modal-big-icon {
-    margin-bottom: 10px;
-    margin-right: $space-xl;
-    .fa {
-      font-size: 50px;
-    }
-    .gicon {
-      width: 48px;
-      height: 48px;
-    }
+    margin-right: 8px;
+    margin-top: -7px;
   }
 
   .share-modal-info-text {

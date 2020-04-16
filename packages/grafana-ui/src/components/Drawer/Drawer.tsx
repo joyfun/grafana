@@ -2,12 +2,14 @@ import React, { CSSProperties, FC, ReactNode } from 'react';
 import { GrafanaTheme } from '@grafana/data';
 import RcDrawer from 'rc-drawer';
 import { css } from 'emotion';
-import { stylesFactory, useTheme, selectThemeVariant } from '../../themes';
+import CustomScrollbar from '../CustomScrollbar/CustomScrollbar';
+import { Icon } from '../Icon/Icon';
+import { stylesFactory, useTheme } from '../../themes';
 
-interface Props {
+export interface Props {
   children: ReactNode;
   /** Title shown at the top of the drawer */
-  title?: string;
+  title?: (() => JSX.Element) | string;
   /** Should the Drawer be closable by clicking on the mask */
   closeOnMaskClick?: boolean;
   /** Render the drawer inside a container on the page */
@@ -15,34 +17,36 @@ interface Props {
   /** Either a number in px or a string with unit postfix */
   width?: number | string;
 
+  /** Set to true if the component rendered within in drawer content has its own scroll */
+  scrollableContent?: boolean;
+
   onClose: () => void;
 }
 
-const getStyles = stylesFactory((theme: GrafanaTheme) => {
+const getStyles = stylesFactory((theme: GrafanaTheme, scollableContent: boolean) => {
   const closeButtonWidth = '50px';
-  const borderColor = selectThemeVariant(
-    {
-      light: theme.colors.gray4,
-      dark: theme.colors.dark9,
-    },
-    theme.type
-  );
+  const borderColor = theme.colors.border2;
+
   return {
     drawer: css`
       .drawer-content {
         background-color: ${theme.colors.bodyBg};
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
     `,
     titleWrapper: css`
       font-size: ${theme.typography.size.lg};
       display: flex;
-      align-items: center;
+      align-items: baseline;
       justify-content: space-between;
       border-bottom: 1px solid ${borderColor};
       padding: ${theme.spacing.sm} 0 ${theme.spacing.sm} ${theme.spacing.md};
       background-color: ${theme.colors.bodyBg};
-      position: sticky;
       top: 0;
+      z-index: 1;
+      flex-grow: 0;
     `,
     close: css`
       cursor: pointer;
@@ -54,6 +58,9 @@ const getStyles = stylesFactory((theme: GrafanaTheme) => {
     `,
     content: css`
       padding: ${theme.spacing.md};
+      flex-grow: 1;
+      overflow: ${!scollableContent ? 'hidden' : 'auto'};
+      z-index: 0;
     `,
   };
 });
@@ -63,11 +70,12 @@ export const Drawer: FC<Props> = ({
   inline = false,
   onClose,
   closeOnMaskClick = false,
+  scrollableContent = false,
   title,
   width = '40%',
 }) => {
   const theme = useTheme();
-  const drawerStyles = getStyles(theme);
+  const drawerStyles = getStyles(theme, scrollableContent);
 
   return (
     <RcDrawer
@@ -82,13 +90,18 @@ export const Drawer: FC<Props> = ({
       style={{ position: `${inline && 'absolute'}` } as CSSProperties}
       className={drawerStyles.drawer}
     >
-      <div className={drawerStyles.titleWrapper}>
-        <div>{title}</div>
-        <div className={drawerStyles.close} onClick={onClose}>
-          <i className="fa fa-close" />
+      {typeof title === 'string' && (
+        <div className={drawerStyles.titleWrapper}>
+          <div>{title}</div>
+          <div className={drawerStyles.close} onClick={onClose}>
+            <Icon name="times" />
+          </div>
         </div>
+      )}
+      {typeof title === 'function' && title()}
+      <div className={drawerStyles.content}>
+        {!scrollableContent ? children : <CustomScrollbar>{children}</CustomScrollbar>}
       </div>
-      <div className={drawerStyles.content}>{children}</div>
     </RcDrawer>
   );
 };

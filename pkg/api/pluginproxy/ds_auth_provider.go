@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	m "github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/util"
 	"golang.org/x/oauth2/google"
@@ -25,7 +25,7 @@ func ApplyScram(ctx context.Context, req *http.Request, proxyPath string, route 
 }
 
 //ApplyRoute should use the plugin route data to set auth headers and custom headers
-func ApplyRoute(ctx context.Context, req *http.Request, proxyPath string, route *plugins.AppPluginRoute, ds *m.DataSource) {
+func ApplyRoute(ctx context.Context, req *http.Request, proxyPath string, route *plugins.AppPluginRoute, ds *models.DataSource) {
 	proxyPath = strings.TrimPrefix(proxyPath, route.Path)
 
 	data := templateData{

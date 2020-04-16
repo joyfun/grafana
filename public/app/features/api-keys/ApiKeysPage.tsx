@@ -2,25 +2,25 @@ import React, { PureComponent } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { connect } from 'react-redux';
 import { hot } from 'react-hot-loader';
-import { ApiKey, NewApiKey, OrgRole } from 'app/types';
+// Utils
+import { ApiKey, CoreEvents, NewApiKey, OrgRole } from 'app/types';
 import { getNavModel } from 'app/core/selectors/navModel';
 import { getApiKeys, getApiKeysCount } from './state/selectors';
-import { loadApiKeys, deleteApiKey, setSearchQuery, addApiKey } from './state/actions';
+import { addApiKey, deleteApiKey, loadApiKeys } from './state/actions';
 import Page from 'app/core/components/Page/Page';
 import { SlideDown } from 'app/core/components/Animations/SlideDown';
 import ApiKeysAddedModal from './ApiKeysAddedModal';
 import config from 'app/core/config';
 import appEvents from 'app/core/app_events';
 import EmptyListCTA from 'app/core/components/EmptyListCTA/EmptyListCTA';
-import { DeleteButton, EventsWithValidation, FormLabel, Input, Switch, ValidationEvents } from '@grafana/ui';
-import { NavModel, dateTime, isDateTime } from '@grafana/data';
+import { DeleteButton, EventsWithValidation, FormLabel, LegacyForms, ValidationEvents, Icon } from '@grafana/ui';
+const { Input, Switch } = LegacyForms;
+import { dateTime, isDateTime, NavModel } from '@grafana/data';
 import { FilterInput } from 'app/core/components/FilterInput/FilterInput';
 import { store } from 'app/store/store';
 import kbn from 'app/core/utils/kbn';
-
-// Utils
-import { CoreEvents } from 'app/types';
 import { getTimeZone } from 'app/features/profile/state/selectors';
+import { setSearchQuery } from './state/reducers';
 
 const timeRangeValidationEvents: ValidationEvents = {
   [EventsWithValidation.onBlur]: [
@@ -151,7 +151,7 @@ export class ApiKeysPage extends PureComponent<Props, any> {
         {!isAdding && (
           <EmptyListCTA
             title="You haven't added any API Keys yet."
-            buttonIcon="gicon gicon-apikeys"
+            buttonIcon="key-skeleton-alt"
             buttonLink="#"
             onClick={this.onToggleAdding}
             buttonTitle=" New API Key"
@@ -181,7 +181,7 @@ export class ApiKeysPage extends PureComponent<Props, any> {
       <SlideDown in={isAdding}>
         <div className="cta-form">
           <button className="cta-form__close btn btn-transparent" onClick={this.onToggleAdding}>
-            <i className="fa fa-close" />
+            <Icon name="times" />
           </button>
           <h5>Add API Key</h5>
           <form className="gf-form-group" onSubmit={this.onAddApiKey}>
@@ -287,7 +287,7 @@ export class ApiKeysPage extends PureComponent<Props, any> {
                     <td>{key.role}</td>
                     <td>{this.formatDate(key.expiration)}</td>
                     <td>
-                      <DeleteButton onConfirm={() => this.onDeleteApiKey(key)} />
+                      <DeleteButton size="sm" onConfirm={() => this.onDeleteApiKey(key)} />
                     </td>
                   </tr>
                 );

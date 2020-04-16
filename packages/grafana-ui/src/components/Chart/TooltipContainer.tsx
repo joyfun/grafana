@@ -13,15 +13,16 @@ interface TooltipContainerProps {
 }
 
 const getTooltipContainerStyles = stylesFactory((theme: GrafanaTheme) => {
-  const bgColor = selectThemeVariant({ light: theme.colors.gray5, dark: theme.colors.dark1 }, theme.type);
+  const bgColor = selectThemeVariant({ light: theme.palette.gray5, dark: theme.palette.dark1 }, theme.type);
   return {
     wrapper: css`
       overflow: hidden;
       background: ${bgColor};
-      /* 30% is an arbitrary choice. We can be more clever about calculating tooltip\'s width */
-      max-width: 30%;
+      /* max-width is set up based on .grafana-tooltip class that's used in dashboard */
+      max-width: 800px;
       padding: ${theme.spacing.sm};
       border-radius: ${theme.border.radius.sm};
+      z-index: ${theme.zIndex.tooltip};
     `,
   };
 });

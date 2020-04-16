@@ -1,14 +1,12 @@
 import _ from 'lodash';
-// @ts-ignore
-import { IQService } from 'angular';
 
 import coreModule from 'app/core/core_module';
 import impressionSrv from 'app/core/services/impression_srv';
 import store from 'app/core/store';
 import { contextSrv } from 'app/core/services/context_srv';
-import { BackendSrv } from './backend_srv';
+import { backendSrv } from './backend_srv';
 import { Section } from '../components/manage_dashboards/manage_dashboards';
-import { DashboardSearchHit } from 'app/types/search';
+import { DashboardSearchHit, DashboardSearchHitType } from 'app/types/search';
 
 interface Sections {
   [key: string]: Partial<Section>;
@@ -18,8 +16,7 @@ export class SearchSrv {
   recentIsOpen: boolean;
   starredIsOpen: boolean;
 
-  /** @ngInject */
-  constructor(private backendSrv: BackendSrv, private $q: IQService) {
+  constructor() {
     this.recentIsOpen = store.getBool('search.sections.recent', true);
     this.starredIsOpen = store.getBool('search.sections.starred', true);
   }
@@ -29,12 +26,13 @@ export class SearchSrv {
       if (result.length > 0) {
         sections['recent'] = {
           title: 'Recent',
-          icon: 'fa fa-clock-o',
+          icon: 'clock-nine',
           score: -1,
           removable: true,
           expanded: this.recentIsOpen,
           toggle: this.toggleRecent.bind(this),
           items: result,
+          type: DashboardSearchHitType.DashHitFolder,
         };
       }
     });
@@ -46,7 +44,7 @@ export class SearchSrv {
       return Promise.resolve([]);
     }
 
-    return this.backendSrv.search({ dashboardIds: dashIds }).then(result => {
+    return backendSrv.search({ dashboardIds: dashIds }).then(result => {
       return dashIds
         .map(orderId => {
           return _.find(result, { id: orderId });
@@ -80,15 +78,16 @@ export class SearchSrv {
       return Promise.resolve();
     }
 
-    return this.backendSrv.search({ starred: true, limit: 30 }).then(result => {
+    return backendSrv.search({ starred: true, limit: 30 }).then(result => {
       if (result.length > 0) {
         sections['starred'] = {
           title: 'Starred',
-          icon: 'fa fa-star-o',
+          icon: 'star',
           score: -2,
           expanded: this.starredIsOpen,
           toggle: this.toggleStarred.bind(this),
           items: result,
+          type: DashboardSearchHitType.DashHitFolder,
         };
       }
     });
@@ -118,12 +117,12 @@ export class SearchSrv {
     }
 
     promises.push(
-      this.backendSrv.search(query).then(results => {
+      backendSrv.search(query).then(results => {
         return this.handleSearchResult(sections, results);
       })
     );
 
-    return this.$q.all(promises).then(() => {
+    return Promise.all(promises).then(() => {
       return _.sortBy(_.values(sections), 'score');
     });
   }
@@ -144,8 +143,9 @@ export class SearchSrv {
           items: [],
           toggle: this.toggleFolder.bind(this),
           url: hit.url,
-          icon: 'fa fa-folder',
+          icon: 'folder',
           score: _.keys(sections).length,
+          type: hit.type,
         };
       }
     }
@@ -164,18 +164,20 @@ export class SearchSrv {
             title: hit.folderTitle,
             url: hit.folderUrl,
             items: [],
-            icon: 'fa fa-folder-open',
+            icon: 'folder-open',
             toggle: this.toggleFolder.bind(this),
             score: _.keys(sections).length,
+            type: DashboardSearchHitType.DashHitFolder,
           };
         } else {
           section = {
             id: 0,
             title: 'General',
             items: [],
-            icon: 'fa fa-folder-open',
+            icon: 'folder-open',
             toggle: this.toggleFolder.bind(this),
             score: _.keys(sections).length,
+            type: DashboardSearchHitType.DashHitFolder,
           };
         }
         // add section
@@ -189,7 +191,7 @@ export class SearchSrv {
 
   private toggleFolder(section: Section) {
     section.expanded = !section.expanded;
-    section.icon = section.expanded ? 'fa fa-folder-open' : 'fa fa-folder';
+    section.icon = section.expanded ? 'folder-open' : 'folder';
 
     if (section.items.length) {
       return Promise.resolve(section);
@@ -199,14 +201,14 @@ export class SearchSrv {
       folderIds: [section.id],
     };
 
-    return this.backendSrv.search(query).then(results => {
+    return backendSrv.search(query).then(results => {
       section.items = results;
       return Promise.resolve(section);
     });
   }
 
   getDashboardTags() {
-    return this.backendSrv.get('/api/dashboards/tags');
+    return backendSrv.get('/api/dashboards/tags');
   }
 }
 

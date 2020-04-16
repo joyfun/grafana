@@ -4,39 +4,22 @@ import React, { PureComponent } from 'react';
 // Services & Utils
 import { config } from 'app/core/config';
 
-import { BarGauge, BarGaugeAlignmentFactors, VizRepeater, DataLinksContextMenu } from '@grafana/ui';
+import { BarGauge, VizRepeater, VizRepeaterRenderValueProps, DataLinksContextMenu } from '@grafana/ui';
 import { BarGaugeOptions } from './types';
-import { getFieldDisplayValues, FieldDisplay, PanelProps } from '@grafana/data';
+import {
+  getFieldDisplayValues,
+  FieldDisplay,
+  PanelProps,
+  getDisplayValueAlignmentFactors,
+  DisplayValueAlignmentFactors,
+} from '@grafana/data';
 import { getFieldLinksSupplier } from 'app/features/panel/panellinks/linkSuppliers';
 
 export class BarGaugePanel extends PureComponent<PanelProps<BarGaugeOptions>> {
-  findMaximumInput = (values: FieldDisplay[], width: number, height: number): BarGaugeAlignmentFactors => {
-    const info: BarGaugeAlignmentFactors = {
-      title: '',
-      text: '',
-    };
-
-    for (let i = 0; i < values.length; i++) {
-      const v = values[i].display;
-      if (v.text && v.text.length > info.text.length) {
-        info.text = v.text;
-      }
-
-      if (v.title && v.title.length > info.title.length) {
-        info.title = v.title;
-      }
-    }
-    return info;
-  };
-
-  renderValue = (
-    value: FieldDisplay,
-    width: number,
-    height: number,
-    alignmentFactors: BarGaugeAlignmentFactors
-  ): JSX.Element => {
+  renderValue = (valueProps: VizRepeaterRenderValueProps<FieldDisplay, DisplayValueAlignmentFactors>): JSX.Element => {
     const { options } = this.props;
-    const { field, display } = value;
+    const { value, alignmentFactors, orientation, width, height } = valueProps;
+    const { field, display, view, colIndex } = value;
 
     return (
       <DataLinksContextMenu links={getFieldLinksSupplier(value)}>
@@ -46,16 +29,16 @@ export class BarGaugePanel extends PureComponent<PanelProps<BarGaugeOptions>> {
               value={display}
               width={width}
               height={height}
-              orientation={options.orientation}
-              thresholds={field.thresholds}
+              orientation={orientation}
+              field={field}
+              display={view?.getFieldDisplayProcessor(colIndex)}
               theme={config.theme}
               itemSpacing={this.getItemSpacing()}
               displayMode={options.displayMode}
-              minValue={field.min}
-              maxValue={field.max}
               onClick={openMenu}
               className={targetClassName}
               alignmentFactors={alignmentFactors}
+              showUnfilled={options.showUnfilled}
             />
           );
         }}
@@ -64,12 +47,14 @@ export class BarGaugePanel extends PureComponent<PanelProps<BarGaugeOptions>> {
   };
 
   getValues = (): FieldDisplay[] => {
-    const { data, options, replaceVariables } = this.props;
+    const { data, options, replaceVariables, fieldConfig } = this.props;
     return getFieldDisplayValues({
-      ...options,
+      fieldConfig,
+      reduceOptions: options.reduceOptions,
       replaceVariables,
       theme: config.theme,
       data: data.series,
+      autoMinMax: true,
     });
   };
 
@@ -87,7 +72,7 @@ export class BarGaugePanel extends PureComponent<PanelProps<BarGaugeOptions>> {
     return (
       <VizRepeater
         source={data}
-        getAlignmentFactors={this.findMaximumInput}
+        getAlignmentFactors={getDisplayValueAlignmentFactors}
         getValues={this.getValues}
         renderValue={this.renderValue}
         renderCounter={renderCounter}

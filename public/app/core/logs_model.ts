@@ -28,7 +28,7 @@ import {
 } from '@grafana/data';
 import { getThemeColor } from 'app/core/utils/colors';
 import { hasAnsiCodes } from 'app/core/utils/text';
-import { sortInAscendingOrder } from 'app/core/utils/explore';
+import { sortInAscendingOrder, deduplicateLogRowsById } from 'app/core/utils/explore';
 import { getGraphSeriesModel } from 'app/plugins/panel/graph2/getGraphSeriesModel';
 
 export const LogLevelColor = {
@@ -42,7 +42,7 @@ export const LogLevelColor = {
 };
 
 const isoDateRegexp = /\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-6]\d[,\.]\d+([+-][0-2]\d:[0-5]\d|Z)/g;
-function isDuplicateRow(row: LogRowModel, other: LogRowModel, strategy: LogsDedupStrategy): boolean {
+function isDuplicateRow(row: LogRowModel, other: LogRowModel, strategy?: LogsDedupStrategy): boolean {
   switch (strategy) {
     case LogsDedupStrategy.exact:
       // Exact still strips dates
@@ -59,7 +59,7 @@ function isDuplicateRow(row: LogRowModel, other: LogRowModel, strategy: LogsDedu
   }
 }
 
-export function dedupLogRows(rows: LogRowModel[], strategy: LogsDedupStrategy): LogRowModel[] {
+export function dedupLogRows(rows: LogRowModel[], strategy?: LogsDedupStrategy): LogRowModel[] {
   if (strategy === LogsDedupStrategy.none) {
     return rows;
   }
@@ -68,7 +68,7 @@ export function dedupLogRows(rows: LogRowModel[], strategy: LogsDedupStrategy): 
     const rowCopy = { ...row };
     const previous = result[result.length - 1];
     if (index > 0 && isDuplicateRow(row, previous, strategy)) {
-      previous.duplicates++;
+      previous.duplicates!++;
     } else {
       rowCopy.duplicates = 0;
       result.push(rowCopy);
@@ -136,30 +136,29 @@ export function makeSeriesForLogs(rows: LogRowModel[], intervalMs: number, timeZ
   }
 
   return seriesList.map((series, i) => {
-    series.datapoints.sort((a: number[], b: number[]) => {
-      return a[1] - b[1];
-    });
+    series.datapoints.sort((a: number[], b: number[]) => a[1] - b[1]);
 
     // EEEP: converts GraphSeriesXY to DataFrame and back again!
     const data = toDataFrame(series);
-    const points = getFlotPairs({
-      xField: data.fields[1],
-      yField: data.fields[0],
-      nullValueMode: NullValueMode.Null,
-    });
+    const fieldCache = new FieldCache(data);
 
-    const timeField = data.fields[1];
+    const timeField = fieldCache.getFirstFieldOfType(FieldType.time);
     timeField.display = getDisplayProcessor({
-      config: timeField.config,
-      type: timeField.type,
-      isUtc: timeZone === 'utc',
+      field: timeField,
+      timeZone,
     });
 
-    const valueField = data.fields[0];
+    const valueField = fieldCache.getFirstFieldOfType(FieldType.number);
     valueField.config = {
       ...valueField.config,
       color: series.color,
     };
+
+    const points = getFlotPairs({
+      xField: timeField,
+      yField: valueField,
+      nullValueMode: NullValueMode.Null,
+    });
 
     const graphSeries: GraphSeriesXY = {
       color: series.color,
@@ -193,15 +192,21 @@ function isLogsData(series: DataFrame) {
  * @param dataFrame
  * @param intervalMs In case there are no metrics series, we use this for computing it from log rows.
  */
-export function dataFrameToLogsModel(dataFrame: DataFrame[], intervalMs: number, timeZone: TimeZone): LogsModel {
+export function dataFrameToLogsModel(
+  dataFrame: DataFrame[],
+  intervalMs: number | undefined,
+  timeZone: TimeZone
+): LogsModel {
   const { logSeries, metricSeries } = separateLogsAndMetrics(dataFrame);
   const logsModel = logSeriesToLogsModel(logSeries);
 
   if (logsModel) {
     if (metricSeries.length === 0) {
       // Create metrics from logs
-      logsModel.series = makeSeriesForLogs(logsModel.rows, intervalMs, timeZone);
+      // If interval is not defined or 0 we cannot really compute the series
+      logsModel.series = intervalMs ? makeSeriesForLogs(logsModel.rows, intervalMs, timeZone) : [];
     } else {
+      // We got metrics in the dataFrame so process those
       logsModel.series = getGraphSeriesModel(
         metricSeries,
         timeZone,
@@ -270,7 +275,7 @@ export function logSeriesToLogsModel(logSeries: DataFrame[]): LogsModel | undefi
     // Assume the first string field in the dataFrame is the message. This was right so far but probably needs some
     // more explicit checks.
     const stringField = fieldCache.getFirstFieldOfType(FieldType.string);
-    if (stringField.labels) {
+    if (stringField?.labels) {
       allLabels.push(stringField.labels);
     }
     return {
@@ -279,7 +284,7 @@ export function logSeriesToLogsModel(logSeries: DataFrame[]): LogsModel | undefi
       stringField,
       logLevelField: fieldCache.getFieldByName('level'),
       idField: getIdField(fieldCache),
-    };
+    } as LogFields;
   });
 
   const commonLabels = allLabels.length > 0 ? findCommonLabels(allLabels) : {};
@@ -312,7 +317,7 @@ export function logSeriesToLogsModel(logSeries: DataFrame[]): LogsModel | undefi
       const searchWords = series.meta && series.meta.searchWords ? series.meta.searchWords : [];
 
       let logLevel = LogLevel.unknown;
-      if (logLevelField) {
+      if (logLevelField && logLevelField.values.get(j)) {
         logLevel = getLogLevelFromKey(logLevelField.values.get(j));
       } else if (seriesLogLevel) {
         logLevel = seriesLogLevel;
@@ -328,18 +333,19 @@ export function logSeriesToLogsModel(logSeries: DataFrame[]): LogsModel | undefi
         timeFromNow: time.fromNow(),
         timeEpochMs: time.valueOf(),
         timeLocal: time.format(logTimeFormat),
-        timeUtc: toUtc(ts).format(logTimeFormat),
+        timeUtc: toUtc(time.valueOf()).format(logTimeFormat),
         uniqueLabels,
         hasAnsi,
         searchWords,
         entry: hasAnsi ? ansicolor.strip(message) : message,
         raw: message,
-        labels: stringField.labels,
-        timestamp: ts,
+        labels: stringField.labels || {},
         uid: idField ? idField.values.get(j) : j.toString(),
       });
     }
   }
+
+  const deduplicatedLogRows = deduplicateLogRowsById(rows);
 
   // Meta data to display in status
   const meta: LogsMetaItem[] = [];
@@ -352,11 +358,17 @@ export function logSeriesToLogsModel(logSeries: DataFrame[]): LogsModel | undefi
   }
 
   const limits = logSeries.filter(series => series.meta && series.meta.limit);
+  const limitValue = Object.values(
+    limits.reduce((acc: any, elem: any) => {
+      acc[elem.refId] = elem.meta.limit;
+      return acc;
+    }, {})
+  ).reduce((acc: number, elem: any) => (acc += elem), 0);
 
   if (limits.length > 0) {
     meta.push({
       label: 'Limit',
-      value: `${limits[0].meta.limit} (${rows.length} returned)`,
+      value: `${limitValue} (${deduplicatedLogRows.length} returned)`,
       kind: LogsMetaKind.String,
     });
   }
@@ -364,7 +376,7 @@ export function logSeriesToLogsModel(logSeries: DataFrame[]): LogsModel | undefi
   return {
     hasUniqueLabels,
     meta,
-    rows,
+    rows: deduplicatedLogRows,
   };
 }
 

@@ -6,7 +6,7 @@ import { SeriesColorChangeHandler } from './GraphWithLegend';
 import { LegendStatsList } from '../Legend/LegendStatsList';
 import { ThemeContext } from '../../themes/ThemeContext';
 import { stylesFactory } from '../../themes';
-import { GrafanaTheme } from '@grafana/data';
+import { GrafanaTheme, formattedValueToString } from '@grafana/data';
 
 export interface GraphLegendItemProps {
   key?: React.Key;
@@ -79,7 +79,7 @@ const getStyles = stylesFactory((theme: GrafanaTheme) => {
       text-align: right;
     `,
     yAxisLabel: css`
-      color: ${theme.colors.gray2};
+      color: ${theme.palette.gray2};
     `,
   };
 });
@@ -124,7 +124,7 @@ export const GraphLegendTableRow: React.FunctionComponent<GraphLegendItemProps> 
         item.displayValues.map((stat, index) => {
           return (
             <td className={styles.value} key={`${stat.title}-${index}`}>
-              {stat.text}
+              {formattedValueToString(stat)}
             </td>
           );
         })}
