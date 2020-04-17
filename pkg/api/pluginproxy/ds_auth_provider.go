@@ -14,7 +14,7 @@ import (
 )
 
 //ApplyScram should use the plugin route data to set auth headers and custom headers
-func ApplyScram(ctx context.Context, req *http.Request, proxyPath string, route *plugins.AppPluginRoute, ds *m.DataSource) {
+func ApplyScram(ctx context.Context, req *http.Request, proxyPath string, route *plugins.AppPluginRoute, ds *models.DataSource) {
 	tokenProvider := newAccessTokenProvider(ds, nil)
 
 	if token, err := tokenProvider.getScramToken(ctx, ds); err != nil {

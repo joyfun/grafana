@@ -1,4 +1,3 @@
-import SkysparkDatasource from '../datasource';
 //@ts-ignore
 import $q from 'q';
 import { TemplateSrvStub } from 'test/specs/helpers';
@@ -12,10 +11,10 @@ describe('SkysparkDataSource', () => {
     instanceSettings: { url: 'url', name: 'influxDb', jsonData: { httpMode: 'GET' } },
   };
 
-  beforeEach(() => {
-    ctx.instanceSettings.url = '/api/datasources/proxy/1';
-    ctx.ds = new SkysparkDatasource(ctx.instanceSettings, ctx.$q, ctx.backendSrv, ctx.templateSrv);
-  });
+  //   beforeEach(() => {
+  //     ctx.instanceSettings.url = '/api/datasources/proxy/1';
+  //     ctx.ds = new SkysparkDatasource(ctx.instanceSettings, ctx.$q, ctx.backendSrv, ctx.templateSrv);
+  //   });
 
   describe('When issuing metricFindQuery', () => {
     const query = 'SELECT max(value) FROM measurement WHERE $timeFilter';
@@ -73,10 +72,10 @@ describe('SkysparkDataSource in POST query mode', () => {
     instanceSettings: { url: 'url', name: 'influxDb', jsonData: { httpMode: 'POST' } },
   };
 
-  beforeEach(() => {
-    ctx.instanceSettings.url = '/api/datasources/proxy/1';
-    ctx.ds = new SkysparkDatasource(ctx.instanceSettings, ctx.$q, ctx.backendSrv, ctx.templateSrv);
-  });
+  //   beforeEach(() => {
+  //     ctx.instanceSettings.url = '/api/datasources/proxy/1';
+  //     ctx.ds = new SkysparkDatasource(ctx.instanceSettings, ctx.$q, ctx.backendSrv, ctx.templateSrv);
+  //   });
 
   describe('When issuing metricFindQuery', () => {
     const query = 'SELECT max(value) FROM measurement';

@@ -1,14 +1,14 @@
 import _ from 'lodash';
 
-import { dateMath, DataSourceApi, DataSourceInstanceSettings } from '@grafana/data';
 import SkysparkSeries from './skyspark_series';
 import SkysparkQueryModel from './skyspark_query_model';
+
+import { dateMath, DataSourceApi, DataSourceInstanceSettings } from '@grafana/data';
 import ResponseParser from './response_parser';
 import { SkysparkQueryBuilder } from './query_builder';
 import { SkysparkQuery, SkysparkOptions } from './types';
-import { BackendSrv } from 'app/core/services/backend_srv';
+import { getBackendSrv } from '@grafana/runtime';
 import { TemplateSrv } from 'app/features/templating/template_srv';
-import { IQService } from 'angular';
 
 export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, SkysparkOptions> {
   type: string;
@@ -26,12 +26,7 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
   authenticationType: string;
 
   /** @ngInject */
-  constructor(
-    instanceSettings: DataSourceInstanceSettings<SkysparkOptions>,
-    private $q: IQService,
-    private backendSrv: BackendSrv,
-    private templateSrv: TemplateSrv
-  ) {
+  constructor(instanceSettings: DataSourceInstanceSettings<SkysparkOptions>, private templateSrv: TemplateSrv) {
     super(instanceSettings);
     this.skyTimes = { d: 'day', m: 'mo', w: 'week', y: 'yr' };
     this.type = 'skyspark';
@@ -53,6 +48,7 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
     this.responseParser = new ResponseParser();
     this.authenticationType = settingsData.authenticationType;
   }
+
   query(options: any) {
     let timeFilter = this.getTimeFilter(options);
     const scopedVars = options.scopedVars;
@@ -81,7 +77,7 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
     });
 
     if (allQueries === '') {
-      return this.$q.when({ data: [] });
+      return Promise.resolve({ data: [] });
     }
 
     // add global adhoc filters to timeFilter
@@ -96,72 +92,70 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
     // replace templated variables
     allQueries = this.templateSrv.replace(allQueries, scopedVars);
 
-    return this._seriesQuery(allQueries, options).then(
-      (data: any): any => {
-        console.log(data);
-        if (!data || !data.cols) {
-          return [];
-        }
-
-        const seriesList = [];
-
-        const target = data.meta.equipName;
-        const alias = data.meta.equipName;
-        const series: any = {};
-        const colnames: string[] = [];
-        const coldis: string[] = [];
-        data.cols.forEach((cl: any, index: any) => {
-          // if ((data.meta.chartType === 'donut' || data.meta.chartType === 'pie') && cl['name'] === 'ts') {
-          // } else {
-          colnames.push(cl['name']);
-          let dis = cl['name'];
-          if (cl['dis']) {
-            dis = cl['dis'];
-          }
-          coldis.push(dis);
-          // }
-        });
-        const nseries = data.rows.map((p: any) => {
-          const rst: any[] = [];
-          for (const idx in colnames) {
-            let val = this.responseParser.parseVal(p[colnames[idx]]);
-            if (data.meta.chartType === 'donut') {
-              val = parseFloat(val);
-            }
-            rst.push(val);
-          }
-          return rst;
-        });
-        series.name = target;
-        series.columns = coldis;
-        series.values = nseries;
-        const skysparkSeries = new SkysparkSeries({
-          series: series,
-          alias: alias,
-        });
-
-        switch (target) {
-          case 'table': {
-            seriesList.push(skysparkSeries.getTable());
-            break;
-          }
-          default: {
-            const timeSeries = skysparkSeries.getTimeSeries();
-            for (y = 0; y < timeSeries.length; y++) {
-              seriesList.push(timeSeries[y]);
-            }
-            break;
-          }
-        }
-
-        return { data: seriesList };
+    return this._seriesQuery(allQueries, options).then((data: any): any => {
+      console.log(data);
+      if (!data || !data.cols) {
+        return [];
       }
-    );
+
+      const seriesList = [];
+
+      const target = data.meta.equipName;
+      const alias = data.meta.equipName;
+      const series: any = {};
+      const colnames: string[] = [];
+      const coldis: string[] = [];
+      data.cols.forEach((cl: any, index: any) => {
+        // if ((data.meta.chartType === 'donut' || data.meta.chartType === 'pie') && cl['name'] === 'ts') {
+        // } else {
+        colnames.push(cl['name']);
+        let dis = cl['name'];
+        if (cl['dis']) {
+          dis = cl['dis'];
+        }
+        coldis.push(dis);
+        // }
+      });
+      const nseries = data.rows.map((p: any) => {
+        const rst: any[] = [];
+        for (const idx in colnames) {
+          let val = this.responseParser.parseVal(p[colnames[idx]]);
+          if (data.meta.chartType === 'donut') {
+            val = parseFloat(val);
+          }
+          rst.push(val);
+        }
+        return rst;
+      });
+      series.name = target;
+      series.columns = coldis;
+      series.values = nseries;
+      const skysparkSeries = new SkysparkSeries({
+        series: series,
+        alias: alias,
+      });
+
+      switch (target) {
+        case 'table': {
+          seriesList.push(skysparkSeries.getTable());
+          break;
+        }
+        default: {
+          const timeSeries = skysparkSeries.getTimeSeries();
+          for (y = 0; y < timeSeries.length; y++) {
+            seriesList.push(timeSeries[y]);
+          }
+          break;
+        }
+      }
+
+      return { data: seriesList };
+    });
   }
 
   annotationQuery(options: any) {
     if (!options.annotation.query) {
-      return this.$q.reject({
+      return Promise.reject({
         message: 'Query missing in annotation definition',
       });
     }
@@ -236,7 +230,9 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
   metricFindQuery(query: string, options?: any) {
     const interpolated = this.templateSrv.replace(query, null, 'regex');
 
-    return this._seriesQuery(interpolated, options).then(_.curry(this.responseParser.parse)(query));
+    return this._seriesQuery(interpolated, options).then(resp => {
+      return this.responseParser.parse(query, resp);
+    });
   }
 
   getTagKeys(options: any = {}) {
@@ -253,7 +249,7 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
 
   _seriesQuery(query: string, options?: any) {
     if (!query) {
-      return this.$q.when({ results: [] });
+      return Promise.resolve({ results: [] });
     }
 
     if (options && options.range) {
@@ -340,28 +336,32 @@ export default class SkysparkDatasource extends DataSourceApi<SkysparkQuery, Sky
       req.headers['Accept'] = 'application/json';
     }
 
-    return this.backendSrv.datasourceRequest(req).then(
-      (result: any) => {
-        return result.data;
-      },
-      (err: any) => {
-        if (err.status !== 0 || err.status >= 300) {
-          if (err.data && err.data.error) {
-            throw {
-              message: 'Skyspark Error: ' + err.data.error,
-              data: err.data,
-              config: err.config,
-            };
+    return getBackendSrv()
+      .datasourceRequest(req)
+      .then(
+        (result: any) => {
+          return result.data;
+        },
+        (err: any) => {
+          if ((Number.isInteger(err.status) && err.status !== 0) || err.status >= 300) {
+            if (err.data && err.data.error) {
+              throw {
+                message: 'InfluxDB Error: ' + err.data.error,
+                data: err.data,
+                config: err.config,
+              };
+            } else {
+              throw {
+                message: 'Network Error: ' + err.statusText + '(' + err.status + ')',
+                data: err.data,
+                config: err.config,
+              };
+            }
           } else {
-            throw {
-              message: 'Network Error: ' + err.statusText + '(' + err.status + ')',
-              data: err.data,
-              config: err.config,
-            };
+            throw err;
           }
         }
-      }
-    );
+      );
   }
 
   getTimeFilter(options: any) {

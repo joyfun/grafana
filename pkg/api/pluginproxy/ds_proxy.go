@@ -166,7 +166,7 @@ func (proxy *DataSourceProxy) getDirector() func(req *http.Request) {
 				req.Header.Del("Authorization")
 				req.Header.Add("Authorization", util.GetBasicAuthHeader(proxy.ds.User, proxy.ds.DecryptedPassword()))
 			}
-		} else if proxy.ds.Type == m.DS_SKYSPARK {
+		} else if proxy.ds.Type == models.DS_SKYSPARK {
 			req.URL.Path = util.JoinURLFragments(proxy.targetUrl.Path, proxy.proxyPath)
 			req.URL.RawQuery = reqQueryVals.Encode()
 			req.RequestURI = util.JoinURLFragments(proxy.targetUrl.Path, proxy.proxyPath)

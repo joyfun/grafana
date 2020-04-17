@@ -33,7 +33,10 @@ export class SkysparkQueryCtrl extends QueryCtrl {
     this.queryModel = new SkysparkQueryModel(this.target, templateSrv, this.panel.scopedVars);
     this.queryBuilder = new SkysparkQueryBuilder(this.target, this.datasource.database);
     this.groupBySegment = this.uiSegmentSrv.newPlusButton();
-    this.resultFormats = [{ text: 'Time series', value: 'time_series' }, { text: 'Table', value: 'table' }];
+    this.resultFormats = [
+      { text: 'Time series', value: 'time_series' },
+      { text: 'Table', value: 'table' },
+    ];
     this.policySegment = uiSegmentSrv.newSegment(this.target.policy);
 
     if (!this.target.measurement) {

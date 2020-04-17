@@ -94,7 +94,7 @@ export default class SkysparkSeries {
       let textCol: any = null;
 
       _.each(series.columns, (column, index) => {
-        if (column === 'ts') {
+        if (column === 'time') {
           timeCol = index;
           return;
         }
